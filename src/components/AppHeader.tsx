@@ -1,7 +1,9 @@
-import { Bell, Search, User } from "lucide-react";
+import { Bell, Search, User, LogOut } from "lucide-react";
 import { alerts } from "@/data/mockData";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AppHeader = () => {
+  const { user, signOut } = useAuth();
   const unacknowledgedCount = alerts.filter(a => !a.acknowledged).length;
 
   return (
@@ -34,9 +36,20 @@ const AppHeader = () => {
             <User className="w-4 h-4 text-primary-foreground" />
           </div>
           <div className="text-left hidden sm:block">
-            <p className="text-sm font-medium text-foreground">Admin</p>
-            <p className="text-[10px] text-muted-foreground">Administrador</p>
+            <p className="text-sm font-medium text-foreground truncate max-w-[120px]">
+              {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuário"}
+            </p>
+            <p className="text-[10px] text-muted-foreground">{user?.email}</p>
           </div>
+        </button>
+
+        {/* Logout */}
+        <button
+          onClick={signOut}
+          className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          title="Sair"
+        >
+          <LogOut className="w-4 h-4" />
         </button>
       </div>
     </header>
