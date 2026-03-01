@@ -1,9 +1,21 @@
 import { cn } from "@/lib/utils";
-import type { Reservoir } from "@/data/mockData";
 import { Droplets, Zap, ZapOff, AlertTriangle, Clock } from "lucide-react";
 
+export interface ReservoirCardData {
+  id: string;
+  name: string;
+  towerName: string;
+  capacityLiters: number;
+  currentLevelPercent: number;
+  currentVolumeLiters: number;
+  status: "ok" | "warning" | "critical" | "offline";
+  pumpStatus: "on" | "off" | "fault";
+  lastReading: string;
+  flowRate: number;
+}
+
 interface ReservoirCardProps {
-  reservoir: Reservoir;
+  reservoir: ReservoirCardData;
 }
 
 const statusConfig = {
@@ -15,15 +27,14 @@ const statusConfig = {
 
 const ReservoirCard = ({ reservoir }: ReservoirCardProps) => {
   const config = statusConfig[reservoir.status];
-  const pumpOn = reservoir.pumpStatus === 'on';
-  const pumpFault = reservoir.pumpStatus === 'fault';
+  const pumpOn = reservoir.pumpStatus === "on";
+  const pumpFault = reservoir.pumpStatus === "fault";
 
   return (
     <div className={cn(
       "relative overflow-hidden rounded-xl border bg-card p-5 shadow-card hover:shadow-elevated transition-all duration-300 group",
       config.border
     )}>
-      {/* Status indicator */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Droplets className={cn("w-5 h-5", config.text)} />
@@ -37,14 +48,13 @@ const ReservoirCard = ({ reservoir }: ReservoirCardProps) => {
         </span>
       </div>
 
-      {/* Water level visualization */}
       <div className="flex items-end gap-4 mb-4">
         <div className="relative w-16 h-24 rounded-lg border-2 border-border overflow-hidden bg-muted/30">
           <div
             className={cn(
               "absolute bottom-0 left-0 right-0 rounded-b-md transition-all duration-1000 ease-out",
-              reservoir.status === 'critical' ? "bg-status-critical/60" :
-              reservoir.status === 'warning' ? "bg-status-warning/40" :
+              reservoir.status === "critical" ? "bg-status-critical/60" :
+              reservoir.status === "warning" ? "bg-status-warning/40" :
               "bg-secondary/50"
             )}
             style={{ height: `${reservoir.currentLevelPercent}%` }}
@@ -68,7 +78,7 @@ const ReservoirCard = ({ reservoir }: ReservoirCardProps) => {
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Capacidade</span>
             <span className="font-medium text-card-foreground">
-              {(reservoir.capacityLiters / 1000).toFixed(0)}k L
+              {(Number(reservoir.capacityLiters) / 1000).toFixed(0)}k L
             </span>
           </div>
           <div className="flex items-center justify-between text-xs">
@@ -80,7 +90,6 @@ const ReservoirCard = ({ reservoir }: ReservoirCardProps) => {
         </div>
       </div>
 
-      {/* Pump status */}
       <div className={cn(
         "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium",
         pumpFault ? "bg-status-critical/10 text-status-critical" :
@@ -96,7 +105,7 @@ const ReservoirCard = ({ reservoir }: ReservoirCardProps) => {
         )}
         <span className="ml-auto flex items-center gap-1 text-muted-foreground">
           <Clock className="w-3 h-3" />
-          {new Date(reservoir.lastReading).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          {new Date(reservoir.lastReading).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
         </span>
       </div>
     </div>
