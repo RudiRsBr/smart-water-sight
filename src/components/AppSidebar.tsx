@@ -8,6 +8,7 @@ import {
   Users, 
   BarChart3,
   Activity,
+  Cpu,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/reservatorios", icon: Droplets, label: "Reservatórios" },
+  { to: "/sensores-bombas", icon: Cpu, label: "Sensores & Bombas" },
   { to: "/alertas", icon: Bell, label: "Alertas", badge: 2 },
   { to: "/condominios", icon: Building2, label: "Condomínios" },
   { to: "/relatorios", icon: BarChart3, label: "Relatórios" },
