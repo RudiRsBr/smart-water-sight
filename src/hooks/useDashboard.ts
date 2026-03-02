@@ -1,7 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export function useDashboardStats() {
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("dashboard-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "alerts" }, () => {
+        qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+        qc.invalidateQueries({ queryKey: ["alerts"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "readings" }, () => {
+        qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+        qc.invalidateQueries({ queryKey: ["recent-readings"] });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [qc]);
+
   return useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
@@ -27,7 +46,6 @@ export function useRecentReadings(sensorIds: string[]) {
     queryKey: ["recent-readings", sensorIds],
     enabled: sensorIds.length > 0,
     queryFn: async () => {
-      // Get latest reading per sensor
       const { data } = await supabase
         .from("readings")
         .select("*")
