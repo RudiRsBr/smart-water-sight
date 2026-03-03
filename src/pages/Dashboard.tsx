@@ -6,7 +6,7 @@ import AlertItem from "@/components/AlertItem";
 import { useDashboardStats } from "@/hooks/useDashboard";
 import { useReservoirsWithDetails } from "@/hooks/useReservoirs";
 import { useAlerts, useAcknowledgeAlert } from "@/hooks/useAlerts";
-import { historicalReadings, weeklyConsumption } from "@/data/mockData";
+import { useHourlyLevels, useWeeklyConsumption } from "@/hooks/useChartData";
 
 const kpiIcons = [Droplets, Timer, AlertTriangle, Clock];
 
@@ -15,6 +15,8 @@ const Dashboard = () => {
   const { data: reservoirsList } = useReservoirsWithDetails();
   const { data: alertsList } = useAlerts();
   const acknowledgeMutation = useAcknowledgeAlert();
+  const { data: hourlyLevels } = useHourlyLevels();
+  const { data: weeklyData } = useWeeklyConsumption();
 
   const activeAlerts = (alertsList || []).filter((a) => a.status === "active");
   const reservoirsDisplay = (reservoirsList || []).slice(0, 4);
@@ -66,7 +68,7 @@ const Dashboard = () => {
             <Activity className="w-4 h-4 text-secondary" />
           </div>
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={historicalReadings}>
+            <AreaChart data={hourlyLevels || []}>
               <defs>
                 <linearGradient id="levelGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(199, 89%, 48%)" stopOpacity={0.3} />
@@ -91,7 +93,7 @@ const Dashboard = () => {
             <BarChart3 className="w-4 h-4 text-secondary" />
           </div>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={weeklyConsumption}>
+            <BarChart data={weeklyData || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 90%)" />
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(215, 16%, 47%)" }} />
               <YAxis tick={{ fontSize: 11, fill: "hsl(215, 16%, 47%)" }} />
