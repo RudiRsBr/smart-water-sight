@@ -1,11 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, subHours, startOfDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 interface HourlyReading {
   timestamp: string;
-  levelPercent: number;
+  [reservoirName: string]: string | number;
+}
+
+interface ReservoirInfo {
+  sensorId: string;
+  reservoirId: string;
+  reservoirName: string;
+  heightCm: number;
 }
 
 interface DailyConsumption {
@@ -19,19 +25,28 @@ export function useHourlyLevels() {
     queryFn: async () => {
       const since = subHours(new Date(), 24).toISOString();
 
-      // Get all nivel sensors with their reservoir height
+      // Get all nivel sensors with their reservoir info
       const { data: sensors } = await supabase
         .from("sensors")
-        .select("id, reservoir_id, reservoirs(height_cm)")
+        .select("id, reservoir_id, reservoirs(name, height_cm)")
         .eq("type", "nivel")
         .eq("status", "online");
 
-      if (!sensors || sensors.length === 0) return [] as HourlyReading[];
+      if (!sensors || sensors.length === 0) return { data: [] as HourlyReading[], reservoirs: [] as string[] };
 
       const sensorIds = sensors.map((s) => s.id);
-      const heightMap: Record<string, number> = {};
+      const sensorInfo: Record<string, ReservoirInfo> = {};
+      const reservoirNames = new Set<string>();
+
       sensors.forEach((s: any) => {
-        heightMap[s.id] = Number(s.reservoirs?.height_cm) || 1;
+        const name = s.reservoirs?.name || s.reservoir_id;
+        sensorInfo[s.id] = {
+          sensorId: s.id,
+          reservoirId: s.reservoir_id,
+          reservoirName: name,
+          heightCm: Number(s.reservoirs?.height_cm) || 1,
+        };
+        reservoirNames.add(name);
       });
 
       const { data: readings } = await supabase
@@ -41,21 +56,31 @@ export function useHourlyLevels() {
         .gte("recorded_at", since)
         .order("recorded_at", { ascending: true });
 
-      if (!readings || readings.length === 0) return [] as HourlyReading[];
+      if (!readings || readings.length === 0) return { data: [] as HourlyReading[], reservoirs: Array.from(reservoirNames) };
 
-      // Group by hour, average across all sensors
-      const hourBuckets: Record<string, number[]> = {};
+      // Group by hour and reservoir
+      const hourBuckets: Record<string, Record<string, number[]>> = {};
       readings.forEach((r) => {
         const hour = format(new Date(r.recorded_at), "HH:00");
-        const pct = Math.min(100, Math.max(0, (Number(r.value) / heightMap[r.sensor_id]) * 100));
-        if (!hourBuckets[hour]) hourBuckets[hour] = [];
-        hourBuckets[hour].push(pct);
+        const info = sensorInfo[r.sensor_id];
+        if (!info) return;
+        const pct = Math.min(100, Math.max(0, (Number(r.value) / info.heightCm) * 100));
+        if (!hourBuckets[hour]) hourBuckets[hour] = {};
+        if (!hourBuckets[hour][info.reservoirName]) hourBuckets[hour][info.reservoirName] = [];
+        hourBuckets[hour][info.reservoirName].push(pct);
       });
 
-      return Object.entries(hourBuckets).map(([timestamp, values]) => ({
-        timestamp,
-        levelPercent: Math.round(values.reduce((a, b) => a + b, 0) / values.length),
-      }));
+      const data: HourlyReading[] = Object.entries(hourBuckets)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([timestamp, reservoirs]) => {
+          const point: HourlyReading = { timestamp };
+          Object.entries(reservoirs).forEach(([name, values]) => {
+            point[name] = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+          });
+          return point;
+        });
+
+      return { data, reservoirs: Array.from(reservoirNames) };
     },
     refetchInterval: 60000,
   });

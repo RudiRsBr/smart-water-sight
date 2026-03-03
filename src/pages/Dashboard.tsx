@@ -1,5 +1,5 @@
 import { Droplets, Timer, AlertTriangle, Clock, Activity, BarChart3 } from "lucide-react";
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import KPICard from "@/components/KPICard";
 import ReservoirCard from "@/components/ReservoirCard";
 import AlertItem from "@/components/AlertItem";
@@ -15,7 +15,9 @@ const Dashboard = () => {
   const { data: reservoirsList } = useReservoirsWithDetails();
   const { data: alertsList } = useAlerts();
   const acknowledgeMutation = useAcknowledgeAlert();
-  const { data: hourlyLevels } = useHourlyLevels();
+  const { data: hourlyResult } = useHourlyLevels();
+  const hourlyLevels = hourlyResult?.data || [];
+  const reservoirNames = hourlyResult?.reservoirs || [];
   const { data: weeklyData } = useWeeklyConsumption();
 
   const activeAlerts = (alertsList || []).filter((a) => a.status === "active");
@@ -68,18 +70,45 @@ const Dashboard = () => {
             <Activity className="w-4 h-4 text-secondary" />
           </div>
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={hourlyLevels || []}>
+            <AreaChart data={hourlyLevels}>
               <defs>
-                <linearGradient id="levelGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(199, 89%, 48%)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(199, 89%, 48%)" stopOpacity={0} />
-                </linearGradient>
+                {reservoirNames.map((name, i) => {
+                  const colors = [
+                    "hsl(199, 89%, 48%)",
+                    "hsl(142, 71%, 45%)",
+                    "hsl(38, 92%, 50%)",
+                    "hsl(0, 84%, 60%)",
+                    "hsl(262, 83%, 58%)",
+                    "hsl(187, 72%, 50%)",
+                  ];
+                  const color = colors[i % colors.length];
+                  return (
+                    <linearGradient key={name} id={`gradient-${i}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={color} stopOpacity={0} />
+                    </linearGradient>
+                  );
+                })}
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 90%)" />
               <XAxis dataKey="timestamp" tick={{ fontSize: 11, fill: "hsl(215, 16%, 47%)" }} />
               <YAxis tick={{ fontSize: 11, fill: "hsl(215, 16%, 47%)" }} domain={[0, 100]} unit="%" />
               <Tooltip contentStyle={{ backgroundColor: "hsl(0, 0%, 100%)", border: "1px solid hsl(214, 20%, 90%)", borderRadius: "8px", fontSize: "12px" }} />
-              <Area type="monotone" dataKey="levelPercent" stroke="hsl(199, 89%, 48%)" strokeWidth={2} fill="url(#levelGradient)" name="Nível (%)" />
+              <Legend wrapperStyle={{ fontSize: "11px" }} />
+              {reservoirNames.map((name, i) => {
+                const colors = [
+                  "hsl(199, 89%, 48%)",
+                  "hsl(142, 71%, 45%)",
+                  "hsl(38, 92%, 50%)",
+                  "hsl(0, 84%, 60%)",
+                  "hsl(262, 83%, 58%)",
+                  "hsl(187, 72%, 50%)",
+                ];
+                const color = colors[i % colors.length];
+                return (
+                  <Area key={name} type="monotone" dataKey={name} stroke={color} strokeWidth={2} fill={`url(#gradient-${i})`} name={name} />
+                );
+              })}
             </AreaChart>
           </ResponsiveContainer>
         </div>
