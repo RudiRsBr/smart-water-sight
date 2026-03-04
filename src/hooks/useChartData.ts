@@ -58,22 +58,24 @@ export function useHourlyLevels() {
 
       if (!readings || readings.length === 0) return { data: [] as HourlyReading[], reservoirs: Array.from(reservoirNames) };
 
-      // Group by hour and reservoir
+      // Group by hour and reservoir (use full datetime key for correct sorting)
       const hourBuckets: Record<string, Record<string, number[]>> = {};
       readings.forEach((r) => {
-        const hour = format(new Date(r.recorded_at), "HH:00");
+        const dt = new Date(r.recorded_at);
+        const sortKey = format(dt, "yyyy-MM-dd HH:00");
         const info = sensorInfo[r.sensor_id];
         if (!info) return;
         const pct = Math.min(100, Math.max(0, (Number(r.value) / info.heightCm) * 100));
-        if (!hourBuckets[hour]) hourBuckets[hour] = {};
-        if (!hourBuckets[hour][info.reservoirName]) hourBuckets[hour][info.reservoirName] = [];
-        hourBuckets[hour][info.reservoirName].push(pct);
+        if (!hourBuckets[sortKey]) hourBuckets[sortKey] = {};
+        if (!hourBuckets[sortKey][info.reservoirName]) hourBuckets[sortKey][info.reservoirName] = [];
+        hourBuckets[sortKey][info.reservoirName].push(pct);
       });
 
       const data: HourlyReading[] = Object.entries(hourBuckets)
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([timestamp, reservoirs]) => {
-          const point: HourlyReading = { timestamp };
+        .map(([sortKey, reservoirs]) => {
+          const displayTime = sortKey.slice(11); // extract "HH:00"
+          const point: HourlyReading = { timestamp: displayTime };
           Object.entries(reservoirs).forEach(([name, values]) => {
             point[name] = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
           });
