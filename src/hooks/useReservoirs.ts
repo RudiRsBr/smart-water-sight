@@ -52,7 +52,7 @@ export function useReservoirsWithDetails() {
           currentVolumeLiters: Math.round((levelPercent / 100) * Number(r.capacity_liters)),
           pumpStatus: pump?.status === "ligada" ? "on" : pump?.status === "falha" ? "fault" : "off",
           lastReading: latestReading?.recorded_at || sensor?.last_reading_at || r.created_at,
-          flowRate: 0,
+          flowRate: pump ? Number(pump.flow_rate_lph) || 0 : 0,
           status: levelPercent < 20 ? "critical" : levelPercent < 40 ? "warning" : levelPercent > 0 ? "ok" : "offline",
         };
       });

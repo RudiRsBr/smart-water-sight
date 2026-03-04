@@ -188,9 +188,39 @@ export type Database = {
         }
         Relationships: []
       }
+      pump_events: {
+        Row: {
+          event_type: string
+          id: string
+          occurred_at: string
+          pump_id: string
+        }
+        Insert: {
+          event_type: string
+          id?: string
+          occurred_at?: string
+          pump_id: string
+        }
+        Update: {
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          pump_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pump_events_pump_id_fkey"
+            columns: ["pump_id"]
+            isOneToOne: false
+            referencedRelation: "pumps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pumps: {
         Row: {
           created_at: string
+          flow_rate_lph: number | null
           hours_run: number
           id: string
           last_maintenance_at: string | null
@@ -202,6 +232,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          flow_rate_lph?: number | null
           hours_run?: number
           id?: string
           last_maintenance_at?: string | null
@@ -213,6 +244,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          flow_rate_lph?: number | null
           hours_run?: number
           id?: string
           last_maintenance_at?: string | null
