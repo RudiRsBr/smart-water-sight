@@ -72,13 +72,13 @@ const ReservoirCard = ({ reservoir }: ReservoirCardProps) => {
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Volume</span>
             <span className="font-medium text-card-foreground">
-              {(reservoir.currentVolumeLiters / 1000).toFixed(1)}k L
+              {reservoir.currentVolumeLiters.toLocaleString("pt-BR")} L
             </span>
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Capacidade</span>
             <span className="font-medium text-card-foreground">
-              {(Number(reservoir.capacityLiters) / 1000).toFixed(0)}k L
+              {Number(reservoir.capacityLiters).toLocaleString("pt-BR")} L
             </span>
           </div>
           <div className="flex items-center justify-between text-xs">
