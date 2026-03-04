@@ -47,6 +47,7 @@ export function useReservoirsWithDetails() {
           towerName: r.towers?.name || "",
           condominiumName: r.towers?.condominiums?.name || "",
           condominiumId: r.towers?.condominium_id || "",
+          capacityLiters: Number(r.capacity_liters),
           currentLevelPercent: Math.round(levelPercent),
           currentVolumeLiters: Math.round((levelPercent / 100) * Number(r.capacity_liters)),
           pumpStatus: pump?.status === "ligada" ? "on" : pump?.status === "falha" ? "fault" : "off",
