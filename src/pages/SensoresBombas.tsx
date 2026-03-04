@@ -61,7 +61,7 @@ const Index = () => {
   const [pumpFormOpen, setPumpFormOpen] = useState(false);
   const [pumpEdit, setPumpEdit] = useState<any>(null);
   const [pumpDeleteId, setPumpDeleteId] = useState<string | null>(null);
-  const [pumpForm, setPumpForm] = useState<PumpForm>({ reservoir_id: "", name: "", model: "", power_hp: null });
+  const [pumpForm, setPumpForm] = useState<PumpForm>({ reservoir_id: "", name: "", model: "", power_hp: null, flow_rate_lph: null });
 
   const openSensorCreate = () => {
     setSensorForm({ reservoir_id: "", type: "nivel", model: "", serial_number: "" });
@@ -84,13 +84,13 @@ const Index = () => {
   };
 
   const openPumpCreate = () => {
-    setPumpForm({ reservoir_id: "", name: "", model: "", power_hp: null });
+    setPumpForm({ reservoir_id: "", name: "", model: "", power_hp: null, flow_rate_lph: null });
     setPumpEdit(null);
     setPumpFormOpen(true);
   };
 
   const openPumpEdit = (p: any) => {
-    setPumpForm({ reservoir_id: p.reservoir_id, name: p.name, model: p.model || "", power_hp: p.power_hp });
+    setPumpForm({ reservoir_id: p.reservoir_id, name: p.name, model: p.model || "", power_hp: p.power_hp, flow_rate_lph: p.flow_rate_lph });
     setPumpEdit(p);
     setPumpFormOpen(true);
   };
@@ -250,6 +250,12 @@ const Index = () => {
                       <span className="text-card-foreground font-medium">{p.power_hp} HP</span>
                     </div>
                   )}
+                  {p.flow_rate_lph != null && p.flow_rate_lph > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Vazão nominal</span>
+                      <span className="text-card-foreground font-medium">{Number(p.flow_rate_lph).toLocaleString("pt-BR")} L/h</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Horas de operação</span>
                     <span className="text-card-foreground font-medium">{Number(p.hours_run).toFixed(0)}h</span>
@@ -350,6 +356,10 @@ const Index = () => {
                 <Label>Potência (HP)</Label>
                 <Input type="number" value={pumpForm.power_hp || ""} onChange={(e) => setPumpForm({ ...pumpForm, power_hp: e.target.value ? Number(e.target.value) : null })} />
               </div>
+            </div>
+            <div>
+              <Label>Vazão Nominal (L/h)</Label>
+              <Input type="number" placeholder="Ex: 5000" value={pumpForm.flow_rate_lph || ""} onChange={(e) => setPumpForm({ ...pumpForm, flow_rate_lph: e.target.value ? Number(e.target.value) : null })} />
             </div>
             <Button className="w-full hydro-gradient" onClick={handlePumpSave} disabled={createPump.isPending || updatePump.isPending}>
               {(createPump.isPending || updatePump.isPending) ? "Salvando..." : "Salvar"}

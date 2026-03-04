@@ -95,14 +95,12 @@ export function useWeeklyConsumption() {
       const days: DailyConsumption[] = [];
       const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-      // Get all nivel sensors with reservoir capacity
-      const { data: sensors } = await supabase
-        .from("sensors")
-        .select("id, reservoir_id, reservoirs(capacity_liters, height_cm)")
-        .eq("type", "nivel");
+      // Get all pumps with their flow rate
+      const { data: pumps } = await supabase
+        .from("pumps")
+        .select("id, flow_rate_lph, reservoir_id");
 
-      if (!sensors || sensors.length === 0) {
-        // Return empty days
+      if (!pumps || pumps.length === 0) {
         for (let i = 6; i >= 0; i--) {
           const d = subDays(new Date(), i);
           days.push({ day: dayNames[d.getDay()], consumo: 0 });
@@ -110,50 +108,66 @@ export function useWeeklyConsumption() {
         return days;
       }
 
-      const sensorIds = sensors.map((s) => s.id);
-      const capacityMap: Record<string, { cap: number; height: number }> = {};
-      sensors.forEach((s: any) => {
-        capacityMap[s.id] = {
-          cap: Number(s.reservoirs?.capacity_liters) || 0,
-          height: Number(s.reservoirs?.height_cm) || 1,
-        };
+      const pumpIds = pumps.map((p) => p.id);
+      const flowRateMap: Record<string, number> = {};
+      pumps.forEach((p) => {
+        flowRateMap[p.id] = Number(p.flow_rate_lph) || 0;
       });
 
       const since = subDays(startOfDay(new Date()), 6).toISOString();
-      const { data: readings } = await supabase
-        .from("readings")
-        .select("sensor_id, value, recorded_at")
-        .in("sensor_id", sensorIds)
-        .gte("recorded_at", since)
-        .order("recorded_at", { ascending: true });
 
-      // Estimate daily consumption: sum of level drops per day (in liters)
-      // Group readings by day and sensor, compute max-min drop
-      const dayBuckets: Record<string, Record<string, number[]>> = {};
-      (readings || []).forEach((r) => {
-        const dayKey = format(new Date(r.recorded_at), "yyyy-MM-dd");
-        if (!dayBuckets[dayKey]) dayBuckets[dayKey] = {};
-        if (!dayBuckets[dayKey][r.sensor_id]) dayBuckets[dayKey][r.sensor_id] = [];
-        dayBuckets[dayKey][r.sensor_id].push(Number(r.value));
+      // Get pump events for the last 7 days
+      const { data: events } = await supabase
+        .from("pump_events")
+        .select("pump_id, event_type, occurred_at")
+        .in("pump_id", pumpIds)
+        .gte("occurred_at", since)
+        .order("occurred_at", { ascending: true });
+
+      // Calculate runtime per pump per day from on/off events
+      // Group events by pump
+      const pumpEventMap: Record<string, Array<{ type: string; at: Date }>> = {};
+      (events || []).forEach((e: any) => {
+        if (!pumpEventMap[e.pump_id]) pumpEventMap[e.pump_id] = [];
+        pumpEventMap[e.pump_id].push({ type: e.event_type, at: new Date(e.occurred_at) });
       });
 
       for (let i = 6; i >= 0; i--) {
         const d = subDays(new Date(), i);
         const dayKey = format(d, "yyyy-MM-dd");
-        const sensorReadings = dayBuckets[dayKey] || {};
+        const dayStart = startOfDay(d);
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
         let totalConsumo = 0;
 
-        Object.entries(sensorReadings).forEach(([sensorId, values]) => {
-          if (values.length < 2) return;
-          const info = capacityMap[sensorId];
-          if (!info) return;
-          // Estimate consumption as sum of drops between consecutive readings
-          for (let j = 1; j < values.length; j++) {
-            const drop = values[j - 1] - values[j];
-            if (drop > 0) {
-              totalConsumo += (drop / info.height) * info.cap;
+        Object.entries(pumpEventMap).forEach(([pumpId, evts]) => {
+          const flowRate = flowRateMap[pumpId] || 0;
+          if (flowRate === 0) return;
+
+          // Filter events relevant to this day (include last event before day start for initial state)
+          const dayEvents = evts.filter((e) => e.at >= dayStart && e.at < dayEnd);
+          const beforeDay = evts.filter((e) => e.at < dayStart);
+          const initialState = beforeDay.length > 0 ? beforeDay[beforeDay.length - 1].type : "off";
+
+          let runtimeMs = 0;
+          let lastOnAt: Date | null = initialState === "on" ? dayStart : null;
+
+          dayEvents.forEach((evt) => {
+            if (evt.type === "on") {
+              lastOnAt = evt.at;
+            } else if ((evt.type === "off" || evt.type === "fault") && lastOnAt) {
+              runtimeMs += evt.at.getTime() - lastOnAt.getTime();
+              lastOnAt = null;
             }
+          });
+
+          // If pump was still on at end of day
+          if (lastOnAt) {
+            const endTime = i === 0 ? new Date() : dayEnd;
+            runtimeMs += endTime.getTime() - lastOnAt.getTime();
           }
+
+          const runtimeHours = runtimeMs / (1000 * 60 * 60);
+          totalConsumo += flowRate * runtimeHours;
         });
 
         days.push({ day: dayNames[d.getDay()], consumo: Math.round(totalConsumo) });

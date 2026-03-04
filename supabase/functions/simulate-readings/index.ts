@@ -53,6 +53,32 @@ Deno.serve(async (req) => {
       results.push({ sensor_id: sensor.id, value, ...result });
     }
 
+    // Simulate pump events (on/off transitions)
+    const { data: pumps } = await supabase
+      .from("pumps")
+      .select("id, status");
+
+    if (pumps && pumps.length > 0) {
+      const pumpEvents = [];
+      for (const pump of pumps) {
+        // Randomly toggle pump state
+        const newState = Math.random() > 0.4 ? "on" : "off";
+        pumpEvents.push({
+          pump_id: pump.id,
+          event_type: newState,
+          occurred_at: new Date().toISOString(),
+        });
+
+        // Update pump status
+        await supabase
+          .from("pumps")
+          .update({ status: newState === "on" ? "ligada" : "desligada" })
+          .eq("id", pump.id);
+      }
+
+      await supabase.from("pump_events").insert(pumpEvents);
+    }
+
     return new Response(JSON.stringify({ processed: results.length, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

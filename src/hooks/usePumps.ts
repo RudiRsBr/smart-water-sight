@@ -10,6 +10,7 @@ export interface PumpForm {
   name: string;
   model: string | null;
   power_hp: number | null;
+  flow_rate_lph: number | null;
 }
 
 export function usePumps(reservoirId?: string) {
